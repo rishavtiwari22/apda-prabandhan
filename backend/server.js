@@ -71,20 +71,20 @@ io.on("connection", (socket) => {
 // GLOBAL MIDDLEWARES
 // ---------------------
 
-// Request logging (dev mode)
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-}
-
-// CORS — allow frontend to talk to backend
+// CORS — must be handled first for Preflight (OPTIONS) requests
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
   })
 );
+
+// Request logging (dev mode)
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
 
 // Security headers
 app.use(helmet({
