@@ -1,0 +1,70 @@
+{
+  "districts": [
+    {
+      "name": "Jashpur",
+      "vidhansabhas": ["Jashpur", "Kunkuri", "Pathalgaon"],
+      "blocks": [
+        { "name": "Jashpur", "panchayats": ["Jashpur Gram 1", "Jashpur Gram 2"] },
+        { "name": "Kunkuri", "panchayats": ["Kunkuri Gram 1", "Kunkuri Gram 2"] },
+        { "name": "Pathalgaon", "panchayats": ["Pathalgaon Gram 1", "Pathalgaon Gram 2"] },
+        { "name": "Pharsabahar", "panchayats": ["Pharsa Gram 1", "Pharsa Gram 2"] },
+        { "name": "Kansabel", "panchayats": ["Kansabel Gram 1", "Kansabel Gram 2"] },
+        { "name": "Bagicha", "panchayats": ["Bagicha Gram 1", "Bagicha Gram 2"] },
+        { "name": "Duldula", "panchayats": ["Duldula Gram 1", "Duldula Gram 2"] },
+        { "name": "Manora", "panchayats": ["Manora Gram 1", "Manora Gram 2"] }
+      ]
+    }
+  ],
+  "disasterTypes": [
+    {
+      "name": "Accidental Death",
+      "nameHindi": "आकस्मिक मृत्यु",
+      "description": "Compensation for accidental deaths requiring investigation.",
+      "compensationCategory": "EX_GRATIA",
+      "documents": [
+        { "name": "Aadhar Card", "nameHindi": "आधार कार्ड", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Death Certificate", "nameHindi": "मृत्यु प्रमाण पत्र", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Bank Passbook", "nameHindi": "बैंक पासबुक", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "FIR/Panchnama", "nameHindi": "एफआईआर / पंचनामा", "isUserMandatory": false, "isDeptMandatory": true, "responsibleDepartment": "thana" },
+        { "name": "Post Mortem Report", "nameHindi": "पीएम रिपोर्ट", "isUserMandatory": false, "isDeptMandatory": true, "responsibleDepartment": "health" }
+      ]
+    },
+    {
+      "name": "Flood",
+      "nameHindi": "बाढ़",
+      "description": "Relief for loss due to flooding. Requires Revenue & Irrigation reports.",
+      "compensationCategory": "EX_GRATIA",
+      "documents": [
+        { "name": "Rashan Card", "nameHindi": "राशन कार्ड", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Photo of Loss", "nameHindi": "क्षति का फोटो", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Bank Passbook", "nameHindi": "बैंक पासबुक", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Patwari Assessment Report", "nameHindi": "पटवारी मूल्यांकन रिपोर्ट", "isUserMandatory": false, "isDeptMandatory": true, "responsibleDepartment": "revenue" },
+        { "name": "Technical Survey Report", "nameHindi": "तकनीकी सर्वेक्षण रिपोर्ट", "isUserMandatory": false, "isDeptMandatory": true, "responsibleDepartment": "irrigation" }
+      ]
+    },
+    {
+      "name": "Fire Incident",
+      "nameHindi": "अग्नि दुर्घटना",
+      "description": "Relief for accidental fire. Requires Police & Revenue verification.",
+      "compensationCategory": "HOUSING",
+      "documents": [
+        { "name": "Ownership Proof", "nameHindi": "स्वामित्व प्रमाण", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Aadhar Card", "nameHindi": "आधार कार्ड", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Incident Verification Report", "nameHindi": "घटना सत्यापन रिपोर्ट", "isUserMandatory": false, "isDeptMandatory": true, "responsibleDepartment": "thana" },
+        { "name": "Loss Valuation Certificate", "nameHindi": "मूल्यांकन प्रमाण पत्र", "isUserMandatory": false, "isDeptMandatory": true, "responsibleDepartment": "revenue" }
+      ]
+    },
+    {
+      "name": "Animal Loss",
+      "nameHindi": "पशु हानि",
+      "description": "Compensation for cattle/animal loss due to disaster.",
+      "compensationCategory": "LIVESTOCK",
+      "documents": [
+        { "name": "Animal Photo with Owner", "nameHindi": "स्वामी के साथ पशु का फोटो", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Animal Tag Certificate", "nameHindi": "पशु टैग प्रमाण पत्र", "isUserMandatory": true, "isDeptMandatory": false, "responsibleDepartment": "individual" },
+        { "name": "Post Mortem report", "nameHindi": "पीएम रिपोर्ट", "isUserMandatory": false, "isDeptMandatory": true, "responsibleDepartment": "agriculture" },
+        { "name": "Verification of Loss", "nameHindi": "क्षेत्र सत्यापन रिपोर्ट", "isUserMandatory": false, "isDeptMandatory": true, "responsibleDepartment": "revenue" }
+      ]
+    }
+  ]
+}

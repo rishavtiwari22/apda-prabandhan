@@ -10,6 +10,8 @@ const DEPARTMENTS = {
   REVENUE: "revenue",
   PATWARI: "patwari",
   THANA: "thana",
+  IRRIGATION: "irrigation",
+  HEALTH: "health",
 };
 
 const DEPARTMENT_VALUES = Object.values(DEPARTMENTS);

@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const { ROLE_VALUES, ROLES } = require("../constants/roles");
+const { ROLE_VALUES, ROLES, DESIGNATION_VALUES } = require("../constants/roles");
 const { DEPARTMENT_VALUES } = require("../constants/departments");
 
 const userSchema = new mongoose.Schema(
@@ -42,7 +42,15 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
-      minlength: [6, "Password must be at least 6 characters"],
+      minlength: [8, "Password must be at least 8 characters"],
+      validate: {
+        validator: function (v) {
+          // At least one uppercase letter and one digit
+          return /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(v);
+        },
+        message:
+          "Password must be at least 8 characters and contain at least one uppercase letter and one number",
+      },
       select: false, // Never return password by default in queries
     },
 
@@ -55,13 +63,21 @@ const userSchema = new mongoose.Schema(
       default: ROLES.PUBLIC,
     },
 
+    designation: {
+      type: String,
+      enum: {
+        values: DESIGNATION_VALUES,
+        message: "Invalid designation",
+      },
+      // Required for SUB_ADMIN role — validated in pre-save
+    },
+
     departmentType: {
       type: String,
       enum: {
         values: DEPARTMENT_VALUES,
         message: "Invalid department type",
       },
-      // Required only for DEPARTMENT role — validated in pre-save
     },
 
     // Which disaster types this user is authorized to resolve
@@ -69,9 +85,23 @@ const userSchema = new mongoose.Schema(
     authorizedDisasterTypes: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "DisasterType", // Will reference Master DisasterType model in Phase 2
+        ref: "DisasterType",
       },
     ],
+
+    // Territory Assignments (District/Tehsil/Block level responsibility)
+    assignedDistrict: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "District",
+    },
+    assignedTehsil: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tehsil",
+    },
+    assignedBlock: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Block",
+    },
 
     isActive: {
       type: Boolean,
@@ -113,10 +143,10 @@ userSchema.pre("save", async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Validate departmentType is required for DEPARTMENT role
+// Validate designation is required for SUB_ADMIN role
 userSchema.pre("save", function () {
-  if (this.role === ROLES.DEPARTMENT && !this.departmentType) {
-    throw new Error("Department type is required for departmental users");
+  if (this.role === ROLES.SUB_ADMIN && !this.designation) {
+    throw new Error("Designation is required for sub-admin users");
   }
 });
 

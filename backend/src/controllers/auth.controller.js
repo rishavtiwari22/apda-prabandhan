@@ -18,7 +18,7 @@ const {
  */
 const register = async (req, res) => {
   try {
-    const { name, mobile, aadhaar, email, password, role, departmentType, otp } =
+    const { name, mobile, aadhaar, email, password, role, departmentType, designation, otp, assignedDistrict, assignedTehsil, assignedBlock } =
       req.body;
 
     // Determine the role being created
@@ -79,13 +79,13 @@ const register = async (req, res) => {
       }
     }
 
-    // Only Admin can create DEPARTMENT or ADMIN users
-    if (requestedRole === ROLES.DEPARTMENT || requestedRole === ROLES.ADMIN) {
+    // Only Admin can create DEPARTMENT, SUB_ADMIN or ADMIN users
+    if (requestedRole === ROLES.DEPARTMENT || requestedRole === ROLES.SUB_ADMIN || requestedRole === ROLES.ADMIN) {
       if (!req.user || req.user.role !== ROLES.ADMIN) {
         return res.status(403).json({
           success: false,
           message:
-            "Only Admin (Collector) can create departmental or admin users.",
+            "Only Admin (Collector) can create departmental, sub-admin or admin users.",
         });
       }
     }
@@ -118,7 +118,7 @@ const register = async (req, res) => {
       role: requestedRole,
     };
 
-    // Add department type if creating a department user
+    // Add department type and territory if creating a department user
     if (requestedRole === ROLES.DEPARTMENT) {
       if (!departmentType) {
         return res.status(400).json({
@@ -126,20 +126,76 @@ const register = async (req, res) => {
           message: "Department type is required for departmental users.",
         });
       }
+      if (!assignedDistrict) {
+        return res.status(400).json({
+          success: false,
+          message: "Assigned District is mandatory for departmental users.",
+        });
+      }
+
+      // Check for uniqueness: Same department in same region
+      const existingUserInRegion = await User.findOne({
+        role: ROLES.DEPARTMENT,
+        departmentType,
+        assignedDistrict,
+        assignedTehsil: assignedTehsil || null,
+        assignedBlock: assignedBlock || null,
+        isActive: true
+      });
+
+      if (existingUserInRegion) {
+        return res.status(400).json({
+          success: false,
+          message: `An active officer for ${departmentType.toUpperCase()} is already assigned to this region.`,
+        });
+      }
+
       userData.departmentType = departmentType;
+      userData.assignedDistrict = assignedDistrict;
+      userData.assignedTehsil = assignedTehsil || null;
+      userData.assignedBlock = assignedBlock || null;
     }
 
-    const user = await User.create(userData);
+    // Add designation and territory if creating a sub-admin (hierarchical officer)
+    if (requestedRole === ROLES.SUB_ADMIN) {
+      if (!designation) {
+        return res.status(400).json({
+          success: false,
+          message: "Designation is required for sub-admin users.",
+        });
+      }
+      if (!assignedDistrict) {
+        return res.status(400).json({
+          success: false,
+          message: "Assigned District is mandatory for sub-admin users.",
+        });
+      }
 
-    // If public user registers themselves, generate tokens and log them in
-    if (requestedRole === ROLES.PUBLIC) {
-      const accessToken = generateAccessToken(user);
-      const refreshToken = generateRefreshToken(user);
+      userData.designation = designation;
+      userData.assignedDistrict = assignedDistrict;
+      userData.assignedTehsil = assignedTehsil || null;
+      userData.assignedBlock = assignedBlock || null;
+    }
 
-      // Save refresh token in DB
-      user.refreshToken = refreshToken;
-      user.lastLogin = new Date();
-      await user.save({ validateBeforeSave: false });
+      const user = await User.create(userData);
+      
+      // Populate territory and authorizations before returning
+      await user.populate([
+        { path: "assignedDistrict", select: "name" },
+        { path: "assignedTehsil", select: "name" },
+        { path: "assignedBlock", select: "name" },
+        { path: "authorizedDisasterTypes", select: "name" }
+      ]);
+
+      // If public user registers themselves, generate tokens and log them in
+      if (requestedRole === ROLES.PUBLIC) {
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+
+        // Save refresh token in DB
+        user.refreshToken = refreshToken;
+        user.lastLogin = new Date();
+        await user.save({ validateBeforeSave: false });
 
       setRefreshTokenCookie(res, refreshToken);
 
@@ -222,7 +278,12 @@ const login = async (req, res) => {
     }
 
     // Find user with password included
-    const user = await User.findOne(query).select("+password");
+    const user = await User.findOne(query)
+      .select("+password")
+      .populate("assignedDistrict", "name")
+      .populate("assignedTehsil", "name")
+      .populate("assignedBlock", "name")
+      .populate("authorizedDisasterTypes", "name");
 
     if (!user) {
       return res.status(401).json({
@@ -445,13 +506,13 @@ const sendOTP = async (req, res, next) => {
 
     if (twilioClient) {
       // REAL TWILIO VERIFY FLOW
-      console.log(`[Twilio] Attempting to send OTP (${type}) to ${formattedMobile}...`);
+      if (process.env.NODE_ENV === "development") console.log(`[Twilio] Attempting to send OTP (${type}) to ${formattedMobile}...`);
       try {
         const verification = await twilioClient.verify.v2
           .services(process.env.TWILIO_VERIFY_SERVICE_SID)
           .verifications.create({ to: formattedMobile, channel: "sms" });
 
-        console.log(`[Twilio] Success: Verification SID ${verification.sid}, Status: ${verification.status}`);
+        if (process.env.NODE_ENV === "development") console.log(`[Twilio] Success: Verification SID ${verification.sid}, Status: ${verification.status}`);
         
         return res.status(200).json({
           success: true,
@@ -510,13 +571,13 @@ const verifyOTP = async (req, res, next) => {
 
     if (twilioClient) {
       // REAL TWILIO VERIFY CHECK
-      console.log(`[Twilio] Verifying OTP ${otp} for ${formattedMobile}...`);
+      if (process.env.NODE_ENV === "development") console.log(`[Twilio] Verifying OTP ${otp} for ${formattedMobile}...`);
       try {
         const check = await twilioClient.verify.v2
           .services(process.env.TWILIO_VERIFY_SERVICE_SID)
           .verificationChecks.create({ to: formattedMobile, code: otp });
 
-        console.log(`[Twilio] Verification result: ${check.status}`);
+        if (process.env.NODE_ENV === "development") console.log(`[Twilio] Verification result: ${check.status}`);
         
         if (check.status !== "approved") {
           return res.status(400).json({
@@ -542,11 +603,24 @@ const verifyOTP = async (req, res, next) => {
         });
       }
 
+      // Brute force protection: invalidate OTP after 5 failed attempts
+      if (otpRecord.attempts >= 5) {
+        otpRecord.isUsed = true;
+        await otpRecord.save();
+        return res.status(429).json({
+          success: false,
+          message: "Too many incorrect attempts. OTP invalidated. Please request a new one.",
+        });
+      }
+
+      otpRecord.attempts = (otpRecord.attempts || 0) + 1;
+      await otpRecord.save();
+
       const isValid = await otpRecord.verifyOTP(otp);
       if (!isValid) {
         return res.status(400).json({
           success: false,
-          message: "Incorrect OTP.",
+          message: `Incorrect OTP. ${5 - otpRecord.attempts} attempt(s) remaining.`,
         });
       }
 
@@ -584,10 +658,10 @@ const resetPassword = async (req, res, next) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8 || !/^(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword)) {
       return res.status(400).json({
         success: false,
-        message: "New password must be at least 6 characters.",
+        message: "Password must be at least 8 characters and contain at least one uppercase letter and one number.",
       });
     }
 
@@ -640,10 +714,10 @@ const changePassword = async (req, res) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8 || !/^(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword)) {
       return res.status(400).json({
         success: false,
-        message: "New password must be at least 6 characters.",
+        message: "Password must be at least 8 characters and contain at least one uppercase letter and one number.",
       });
     }
 
@@ -712,6 +786,202 @@ const changePassword = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get all departmental/admin users for assignment
+ * @route   GET /api/auth/users
+ * @access  Private (Admin/Department)
+ */
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({ role: { $ne: ROLES.PUBLIC }, isActive: true }).select("name mobile role departmentType");
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch users.",
+    });
+  }
+};
+
+/**
+ * @desc    Get ALL users for admin management (includes inactive & public)
+ * @route   GET /api/auth/users/all
+ * @access  Private (Admin)
+ */
+const getAllUsersAdmin = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("name mobile aadhaar email role departmentType designation isActive authorizedDisasterTypes assignedDistrict assignedTehsil assignedBlock lastLogin createdAt")
+      .populate("authorizedDisasterTypes", "name")
+      .populate("assignedDistrict", "name")
+      .populate("assignedTehsil", "name")
+      .populate("assignedBlock", "name")
+      .sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch users.",
+    });
+  }
+};
+
+/**
+ * @desc    Toggle user active status (activate/deactivate)
+ * @route   PATCH /api/auth/users/:id/toggle-active
+ * @access  Private (Admin)
+ */
+const toggleUserActive = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    // Prevent admin from deactivating themselves
+    if (user._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({ success: false, message: "Cannot deactivate your own account." });
+    }
+
+    user.isActive = !user.isActive;
+    // Clear refresh token when deactivating
+    if (!user.isActive) user.refreshToken = null;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message: `User ${user.isActive ? "activated" : "deactivated"} successfully.`,
+      data: user.toSafeObject(),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to update user status." });
+  }
+};
+
+/**
+ * @desc    Update user details (admin editing another user)
+ * @route   PUT /api/auth/users/:id
+ * @access  Private (Admin)
+ */
+const updateUser = async (req, res) => {
+  try {
+    const { name, mobile, aadhaar, email, role, departmentType, designation } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    if (name) user.name = name;
+    if (mobile) user.mobile = mobile;
+    if (aadhaar) user.aadhaar = aadhaar;
+    if (email !== undefined) user.email = email;
+    if (role) user.role = role;
+    if (departmentType !== undefined) user.departmentType = departmentType;
+    if (designation !== undefined) user.designation = designation;
+    
+    // Territory update
+    const newDistrict = req.body.assignedDistrict !== undefined ? (req.body.assignedDistrict || null) : user.assignedDistrict;
+    const newTehsil = req.body.assignedTehsil !== undefined ? (req.body.assignedTehsil || null) : user.assignedTehsil;
+    const newBlock = req.body.assignedBlock !== undefined ? (req.body.assignedBlock || null) : user.assignedBlock;
+    const newRole = role || user.role;
+    const newDeptType = departmentType !== undefined ? departmentType : user.departmentType;
+
+    if (newRole === ROLES.DEPARTMENT) {
+      if (!newDistrict) {
+        return res.status(400).json({ success: false, message: "Assigned District is mandatory for departmental users." });
+      }
+      if (!newDeptType) {
+        return res.status(400).json({ success: false, message: "Department Type is mandatory for departmental users." });
+      }
+
+      // Uniqueness check: excluding current user
+      const existingUserInRegion = await User.findOne({
+        _id: { $ne: user._id },
+        role: ROLES.DEPARTMENT,
+        departmentType: newDeptType,
+        assignedDistrict: newDistrict,
+        assignedTehsil: newTehsil,
+        assignedBlock: newBlock,
+        isActive: true
+      });
+
+      if (existingUserInRegion) {
+        return res.status(400).json({
+          success: false,
+          message: `An active officer for ${newDeptType.toUpperCase()} is already assigned to this region.`,
+        });
+      }
+    }
+
+    user.assignedDistrict = newDistrict;
+    user.assignedTehsil = newTehsil;
+    user.assignedBlock = newBlock;
+
+    await user.save();
+
+    // Populate territory and authorizations before returning to ensure frontend renders names
+    await user.populate([
+      { path: "assignedDistrict", select: "name" },
+      { path: "assignedTehsil", select: "name" },
+      { path: "assignedBlock", select: "name" },
+      { path: "authorizedDisasterTypes", select: "name" }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully.",
+      data: user.toSafeObject(),
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ success: false, message: `A user with this ${field} already exists.` });
+    }
+    res.status(500).json({ success: false, message: error.message || "Failed to update user." });
+  }
+};
+
+/**
+ * @desc    Update authorized disaster types for a user
+ * @route   PATCH /api/auth/users/:id/authorized-disasters
+ * @access  Private (Admin)
+ */
+const updateAuthorizedDisasters = async (req, res) => {
+  try {
+    const { disasterTypeIds } = req.body;
+    if (!Array.isArray(disasterTypeIds)) {
+      return res.status(400).json({ success: false, message: "disasterTypeIds must be an array." });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    user.authorizedDisasterTypes = disasterTypeIds;
+    await user.save({ validateBeforeSave: false });
+
+    // Re-fetch with populated disaster types
+    const updated = await User.findById(req.params.id)
+      .select("name role departmentType authorizedDisasterTypes")
+      .populate("authorizedDisasterTypes", "name");
+
+    res.status(200).json({
+      success: true,
+      message: `Authorization updated. User now authorized for ${disasterTypeIds.length} disaster type(s).`,
+      data: updated,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to update authorization." });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -722,4 +992,9 @@ module.exports = {
   verifyOTP,
   resetPassword,
   changePassword,
+  getAllUsers,
+  getAllUsersAdmin,
+  toggleUserActive,
+  updateUser,
+  updateAuthorizedDisasters,
 };

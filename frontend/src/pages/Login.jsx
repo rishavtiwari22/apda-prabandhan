@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Shield, Lock, User, ArrowRight, Loader2 } from "lucide-react";
+import { Shield, Lock, User, ArrowRight, Loader2, CheckCircle } from "lucide-react";
 import API from "../services/api";
 import useAuthStore from "../store/authStore";
 
@@ -32,7 +32,19 @@ const Login = () => {
       if (res.data?.success) {
         const { user, accessToken } = res.data.data;
         setAuth(user, accessToken);
-        navigate(from, { replace: true });
+        
+        // Deterministic redirection based on role
+        if (!location.state?.from) {
+          if (user.role === "admin") {
+             navigate("/admin/dashboard", { replace: true });
+          } else if (user.role === "department") {
+             navigate("/department/dashboard", { replace: true });
+          } else {
+             navigate("/", { replace: true });
+          }
+        } else {
+          navigate(from, { replace: true });
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please check your credentials.");

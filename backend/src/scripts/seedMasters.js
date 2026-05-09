@@ -2,89 +2,77 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const connectDB = require("../config/db");
 const DisasterType = require("../models/disasterType.model");
+const DocumentType = require("../models/documentType.model");
 const District = require("../models/district.model");
 const Block = require("../models/block.model");
 const Panchayat = require("../models/panchayat.model");
-
-const DISASTER_TYPES = [
-  {
-    name: "Flood",
-    nameHindi: "बाढ़",
-    description: "Loss due to heavy rainfall and flood",
-    requiredDocuments: [
-      { label: "Panchnama", labelHindi: "पंचनामा", isMandatory: true },
-      { label: "Bank Passbook", labelHindi: "बैंक पासबुक", isMandatory: true },
-      { label: "Photo of Loss", labelHindi: "क्षति का फोटो", isMandatory: true },
-    ],
-  },
-  {
-    name: "Fire",
-    nameHindi: "आग",
-    description: "Loss due to accidental fire",
-    requiredDocuments: [
-      { label: "Fire Brigade Report", labelHindi: "दमकल रिपोर्ट", isMandatory: false },
-      { label: "Panchnama", labelHindi: "पंचनामा", isMandatory: true },
-    ],
-  },
-  {
-    name: "Lightning",
-    nameHindi: "आकाशीय बिजली",
-    description: "Loss due to lightning strike",
-    requiredDocuments: [
-      { label: "Post Mortem Report (if applicable)", labelHindi: "पीएम रिपोर्ट", isMandatory: false },
-      { label: "Panchnama", labelHindi: "पंचनामा", isMandatory: true },
-    ],
-  },
-];
-
-const GEOGRAPHY_DATA = {
-  district: "Jabalpur",
-  blocks: [
-    {
-      name: "Jabalpur",
-      panchayats: ["Panchayat A", "Panchayat B", "Panchayat C"],
-    },
-    {
-      name: "Panagar",
-      panchayats: ["Panchayat D", "Panchayat E"],
-    },
-    {
-      name: "Sihora",
-      panchayats: ["Panchayat F", "Panchayat G"],
-    },
-  ],
-};
+const Vidhansabha = require("../models/vidhansabha.model");
+const Application = require("../models/application.model");
+const Notification = require("../models/notification.model");
+const masterData = require("../data/masterData.json");
 
 const seedMasters = async () => {
   try {
     await connectDB();
 
-    console.log("🧹 Clearing existing masters...");
+    console.log("🧹 Clearing existing data (System Reset)...");
+    await Application.deleteMany({});
+    await Notification.deleteMany({});
     await DisasterType.deleteMany({});
+    await DocumentType.deleteMany({});
     await District.deleteMany({});
     await Block.deleteMany({});
     await Panchayat.deleteMany({});
+    await Vidhansabha.deleteMany({});
 
-    console.log("🌱 Seeding Disaster Types...");
-    await DisasterType.insertMany(DISASTER_TYPES);
-
-    console.log("🌱 Seeding Geography...");
-    const district = await District.create({ name: GEOGRAPHY_DATA.district });
-
-    for (const blockData of GEOGRAPHY_DATA.blocks) {
-      const block = await Block.create({
-        name: blockData.name,
-        district: district._id,
+    console.log("🌱 Seeding Disaster Types & Document Definitions...");
+    for (const dt of masterData.disasterTypes) {
+      const disaster = await DisasterType.create({
+        name: dt.name,
+        nameHindi: dt.nameHindi,
+        description: dt.description,
+        compensationCategory: dt.compensationCategory
       });
 
-      const panchayatDocs = blockData.panchayats.map((name) => ({
-        name,
-        block: block._id,
-      }));
-      await Panchayat.insertMany(panchayatDocs);
+      if (dt.documents && dt.documents.length > 0) {
+        const docDocs = dt.documents.map(d => ({
+          ...d,
+          disasterType: disaster._id
+        }));
+        await DocumentType.insertMany(docDocs);
+      }
     }
 
-    console.log("\n✅ Master Data seeded successfully!");
+    console.log("🌱 Seeding Geography Records...");
+    for (const distData of masterData.districts) {
+      const district = await District.create({ name: distData.name });
+      console.log(`  - District: ${distData.name}`);
+
+      // Seed Vidhansabhas
+      if (distData.vidhansabhas) {
+        const vDocs = distData.vidhansabhas.map(name => ({
+          name,
+          district: district._id
+        }));
+        await Vidhansabha.insertMany(vDocs);
+        console.log(`    - ${vDocs.length} Vidhansabhas seeded`);
+      }
+
+      for (const blockData of distData.blocks) {
+        const block = await Block.create({
+          name: blockData.name,
+          district: district._id,
+        });
+
+        const panchayatDocs = blockData.panchayats.map((name) => ({
+          name,
+          block: block._id,
+        }));
+        await Panchayat.insertMany(panchayatDocs);
+      }
+    }
+
+    console.log("\n✅ Master Data seeded successfully from JSON!");
     process.exit(0);
   } catch (error) {
     console.error("❌ Seeding failed:", error.message);

@@ -30,7 +30,10 @@ const requireAuth = async (req, res, next) => {
     const decoded = verifyAccessToken(token);
 
     // Fetch user from DB (without password and refreshToken)
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id)
+      .populate("assignedDistrict", "name")
+      .populate("assignedBlock", "name")
+      .populate("authorizedDisasterTypes", "name");
 
     if (!user) {
       return res.status(401).json({

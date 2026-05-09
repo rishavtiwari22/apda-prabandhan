@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { COMPENSATION_CATEGORY_VALUES } = require("../constants/compensation");
 
 const disasterTypeSchema = new mongoose.Schema(
   {
@@ -17,25 +18,34 @@ const disasterTypeSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    // List of documents that the applicant must upload for this disaster
-    requiredDocuments: [
-      {
-        label: { type: String, required: true },
-        labelHindi: { type: String, required: true },
-        isMandatory: { type: Boolean, default: true },
+    compensationCategory: {
+      type: String,
+      required: [true, "Compensation category is required"],
+      enum: {
+        values: COMPENSATION_CATEGORY_VALUES,
+        message: "Invalid compensation category",
       },
-    ],
+    },
     isActive: {
       type: Boolean,
       default: true,
     },
+    slaHours: {
+      type: Number,
+      default: 24,
+    },
+    allowedLossMetrics: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "LossMetric",
+      },
+    ],
   },
   {
     timestamps: true,
   }
 );
 
-disasterTypeSchema.index({ name: 1 });
 disasterTypeSchema.index({ isActive: 1 });
 
 const DisasterType = mongoose.model("DisasterType", disasterTypeSchema);

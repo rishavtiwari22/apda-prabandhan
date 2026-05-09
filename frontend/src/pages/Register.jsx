@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Shield, User, Phone, CreditCard, Mail, Lock, CheckCircle, Loader2, ArrowRight } from "lucide-react";
 import API from "../services/api";
 import useAuthStore from "../store/authStore";
+import { masterApi } from "../services/api.service";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -11,7 +12,11 @@ const Register = () => {
     aadhaar: "",
     email: "",
     password: "",
+    assignedDistrict: "",
+    assignedBlock: "",
   });
+  const [districts, setDistricts] = useState([]);
+  const [blocks, setBlocks] = useState([]);
   const [step, setStep] = useState(1); // 1: Details, 2: OTP
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,6 +24,38 @@ const Register = () => {
 
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+
+  useEffect(() => {
+    fetchDistricts();
+  }, []);
+
+  const fetchDistricts = async () => {
+    try {
+      const res = await masterApi.getDistricts();
+      setDistricts(res.data.data);
+    } catch (err) {
+      console.error("Failed to fetch districts:", err);
+    }
+  };
+
+  const fetchBlocks = async (districtId) => {
+    try {
+      const res = await masterApi.getBlocks(districtId);
+      setBlocks(res.data.data);
+    } catch (err) {
+      console.error("Failed to fetch blocks:", err);
+    }
+  };
+
+  const handleDistrictChange = (e) => {
+    const districtId = e.target.value;
+    setFormData({ ...formData, assignedDistrict: districtId, assignedBlock: "" });
+    if (districtId) {
+      fetchBlocks(districtId);
+    } else {
+      setBlocks([]);
+    }
+  };
 
   const handleChange = (e) => {
     let value = e.target.value;
@@ -110,7 +147,7 @@ const Register = () => {
           
           <div className="mt-12 pt-8 border-t border-white/10 relative z-10">
             <p className="text-xs text-brand-200 font-medium">
-              Aapda Prabandhan v1.0 • 2026
+              Jashpur District Pariyojana v1.0 • 2026
             </p>
           </div>
         </div>
@@ -240,6 +277,42 @@ const Register = () => {
                           placeholder="••••••••"
                         />
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">
+                        District
+                      </label>
+                      <select
+                        name="assignedDistrict"
+                        required
+                        value={formData.assignedDistrict}
+                        onChange={handleDistrictChange}
+                        className="block w-full px-4 py-3.5 border border-slate-200 rounded-2xl bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:bg-white transition-all text-sm shadow-sm"
+                      >
+                        <option value="">Select District</option>
+                        {districts.map((d) => (
+                          <option key={d._id} value={d._id}>{d.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">
+                        Block
+                      </label>
+                      <select
+                        name="assignedBlock"
+                        required
+                        disabled={!formData.assignedDistrict}
+                        value={formData.assignedBlock}
+                        onChange={handleChange}
+                        className="block w-full px-4 py-3.5 border border-slate-200 rounded-2xl bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:bg-white transition-all text-sm shadow-sm disabled:opacity-50"
+                      >
+                        <option value="">Select Block</option>
+                        {blocks.map((b) => (
+                          <option key={b._id} value={b._id}>{b.name}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
