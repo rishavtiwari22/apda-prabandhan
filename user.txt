@@ -1,6 +1,0 @@
-Role	Mobile (Login ID)	Password	Responsibility
-Applicant	9115550005	Password@123	Submit a claim for "Accidental Death" in Jashpur.
-Tehsildar	9115550003	Password@123	L1 Review: First verification level.
-SDM	9115550002	Password@123	L2 Review: Second verification level.
-Collector	9115550001	Password@123	Final Approval: Use Batch Resolve or individual resolution.
-Agri Officer	9115550004	Password@123	Specialist: Perform departmental document verification.
