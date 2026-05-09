@@ -112,6 +112,15 @@ app.use((req, res, next) => {
 // ---------------------
 // ROUTES
 // ---------------------
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "Apda Prabandhan API is running",
+    environment: process.env.NODE_ENV,
+    healthCheck: "/api/health"
+  });
+});
+
 app.use("/api", mainRouter);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
