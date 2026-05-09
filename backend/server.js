@@ -79,17 +79,10 @@ if (process.env.NODE_ENV === "development") {
 // CORS — allow frontend to talk to backend
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. server-to-server, curl, Postman)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS: Origin ${origin} not allowed`));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
   })
 );
 
