@@ -18,7 +18,13 @@ const errorHandler = require("./src/middlewares/error.middleware");
 // Parse allowed origins from environment variable (comma-separated for production)
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : ["http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:5174"];
+  : [
+      "https://apda-prabandhan-eqbw.vercel.app",
+      "https://apda-prabandhan.vercel.app",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:5174"
+    ];
 
 // Initialize Express
 const app = express();
