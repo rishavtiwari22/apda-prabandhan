@@ -137,7 +137,7 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    // Connect to MongoDB first
+    // Connect to MongoDB
     await connectDB();
 
     server.listen(PORT, () => {
@@ -153,4 +153,13 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// If file is run directly (local development), start the server
+if (require.main === module) {
+  startServer();
+} else {
+  // If imported (e.g. by Vercel), just connect to DB
+  connectDB();
+}
+
+// Export app for Vercel
+module.exports = app;
