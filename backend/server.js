@@ -33,7 +33,7 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     credentials: true,
   },
