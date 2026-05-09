@@ -21,3 +21,6 @@ Thumbs.db
 # Build output
 dist/
 build/
+
+# Local data
+user.txt
